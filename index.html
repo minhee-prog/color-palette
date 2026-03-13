@@ -1554,19 +1554,38 @@ function renderTrends() {
 }
 
 // ===== RANDOM =====
+const harmonyMethods = ['complementary','analogous','triadic','split','tetradic','monochromatic'];
+const harmonyLabels = { complementary:'보색', analogous:'유사색', triadic:'3색 조화', split:'분할 보색', tetradic:'4색 조화', monochromatic:'단색 조화' };
+
+function generateRandomPalette() {
+  const count = Math.floor(Math.random() * 4) + 2; // 2~5
+  const baseH = Math.random() * 360;
+  const baseS = 40 + Math.random() * 50; // 40~90
+  const baseL = 30 + Math.random() * 40; // 30~70
+  const baseHex = hslToHex(baseH, baseS, baseL);
+  const method = harmonyMethods[Math.floor(Math.random() * harmonyMethods.length)];
+  let colors = getHarmonyColors(baseHex, method);
+  // shuffle and pick 'count' colors, always include base
+  colors = [baseHex, ...colors.sort(() => Math.random() - 0.5)];
+  colors = [...new Set(colors)].slice(0, count);
+  // if not enough, add slight variations
+  while (colors.length < count) {
+    const tweak = hslToHex(baseH + (Math.random()*30-15), baseS + (Math.random()*20-10), baseL + (Math.random()*20-10));
+    if (!colors.includes(tweak)) colors.push(tweak);
+  }
+  return { colors, method };
+}
+
 function renderRandomPalettes() {
-  const all = [...palettes, ...themePalettes, ...trendPalettes];
-  const shuffled = all.sort(() => Math.random() - 0.5);
-  const picked = shuffled.slice(0, 12);
-  document.getElementById('randomGrid').innerHTML = picked.map(p => `
+  const palettesArr = Array.from({ length: 12 }, () => generateRandomPalette());
+  document.getElementById('randomGrid').innerHTML = palettesArr.map(p => `
     <div class="palette-card">
       <div class="palette-colors">
         ${p.colors.map(c => `<div style="background:${c}" data-hex="${c}" onclick="openColorModal('${c}')"></div>`).join('')}
       </div>
       <div class="palette-info">
-        <h3>${p.name}</h3>
-        <p>${p.desc}</p>
-        ${p.tags ? `<div class="palette-tags">${p.tags.map(t => `<span class="palette-tag">${t}</span>`).join('')}</div>` : ''}
+        <h3>${p.colors.length}색 ${harmonyLabels[p.method]} 조합</h3>
+        <p>${p.colors.map(c => c).join(' · ')}</p>
       </div>
     </div>
   `).join('');
