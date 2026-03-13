@@ -467,24 +467,6 @@ body {
 .search-no-results .no-emoji { font-size: 2.5em; margin-bottom: 12px; }
 .search-no-results p { font-size: 0.95em; }
 
-/* Random Tab */
-.random-refresh-btn {
-  padding: 12px 32px;
-  background: linear-gradient(135deg, var(--accent), #ec4899);
-  border: none;
-  color: white;
-  border-radius: 25px;
-  font-size: 1em;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 15px rgba(124,58,237,0.3);
-}
-.random-refresh-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(124,58,237,0.4);
-}
-.random-refresh-btn:active { transform: translateY(0); }
-
 /* Copy Toast */
 .toast {
   position: fixed;
@@ -661,7 +643,6 @@ body {
   <button class="tab-btn" data-tab="gradient">🌈 그라데이션</button>
   <button class="tab-btn" data-tab="theme">🏷️ 테마별</button>
   <button class="tab-btn" data-tab="trend">🔥 트렌드</button>
-  <button class="tab-btn" data-tab="random">🎲 랜덤 추천</button>
 </div>
 
 <!-- ===== 추천 팔레트 ===== -->
@@ -750,14 +731,6 @@ body {
 <div class="tab-content" id="tab-trend">
   <div class="section-title">🔥 2026 트렌드 컬러</div>
   <div class="trend-grid" id="trendGrid"></div>
-</div>
-
-<div class="tab-content" id="tab-random">
-  <div class="section-title">🎲 랜덤 색상 추천</div>
-  <div style="text-align:center;margin-bottom:24px;">
-    <button class="random-refresh-btn" onclick="renderRandomPalettes()">🔄 다시 추천받기</button>
-  </div>
-  <div class="palette-grid" id="randomGrid"></div>
 </div>
 
 <!-- Color Modal -->
@@ -1552,26 +1525,6 @@ function renderTrends() {
     </div>
   `).join('');
 }
-
-// ===== RANDOM =====
-function renderRandomPalettes() {
-  const all = [...palettes, ...themePalettes, ...trendPalettes];
-  const shuffled = all.sort(() => Math.random() - 0.5);
-  const picked = shuffled.slice(0, 12);
-  document.getElementById('randomGrid').innerHTML = picked.map(p => `
-    <div class="palette-card">
-      <div class="palette-colors">
-        ${p.colors.map(c => `<div style="background:${c}" data-hex="${c}" onclick="openColorModal('${c}')"></div>`).join('')}
-      </div>
-      <div class="palette-info">
-        <h3>${p.name}</h3>
-        <p>${p.desc}</p>
-        ${p.tags ? `<div class="palette-tags">${p.tags.map(t => `<span class="palette-tag">${t}</span>`).join('')}</div>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
-renderRandomPalettes();
 
 // ===== COLOR MODAL =====
 const allHarmonyTypes = [
