@@ -411,6 +411,58 @@ body {
 .theme-cat-btn:hover { border-color: var(--accent-light); color: var(--text); }
 .theme-cat-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
 
+/* Search Bar */
+.search-container {
+  max-width: 600px;
+  margin: 0 auto 8px;
+  padding: 0 20px;
+}
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 18px;
+  gap: 10px;
+  transition: border-color 0.3s;
+}
+.search-bar:focus-within { border-color: var(--accent); }
+.search-bar svg { flex-shrink: 0; color: var(--text-muted); }
+.search-bar input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 1em;
+  outline: none;
+}
+.search-bar input::placeholder { color: var(--text-muted); }
+.search-bar .clear-btn {
+  background: none; border: none;
+  color: var(--text-muted);
+  font-size: 1.2em;
+  cursor: pointer;
+  display: none;
+  padding: 0 4px;
+  line-height: 1;
+}
+.search-bar .clear-btn.visible { display: block; }
+.search-bar .clear-btn:hover { color: var(--text); }
+.search-results-info {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85em;
+  padding: 8px 0 0;
+}
+.search-no-results {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+.search-no-results .no-emoji { font-size: 2.5em; margin-bottom: 12px; }
+.search-no-results p { font-size: 0.95em; }
+
 /* Copy Toast */
 .toast {
   position: fixed;
@@ -570,6 +622,15 @@ body {
 <div class="header">
   <h1>🎨 Color Palette</h1>
   <p>아름다운 색상 조합을 찾아보세요</p>
+</div>
+
+<div class="search-container">
+  <div class="search-bar">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    <input type="text" id="searchInput" placeholder="색상 검색 (예: 파스텔, ocean, pink, 봄...)">
+    <button class="clear-btn" id="searchClear" onclick="clearSearch()">&times;</button>
+  </div>
+  <div class="search-results-info" id="searchInfo"></div>
 </div>
 
 <div class="tabs">
@@ -1167,6 +1228,179 @@ trendGrid.innerHTML = trendPalettes.map(p => `
     </div>
   </div>
 `).join('');
+
+// ===== SEARCH =====
+const bilingualMap = {
+  // 카테고리
+  warm: '따뜻한', cool: '차가운', pastel: '파스텔', dark: '다크', neutral: '뉴트럴',
+  '따뜻한': 'warm', '차가운': 'cool', '파스텔': 'pastel', '다크': 'dark', '뉴트럴': 'neutral',
+  // 계절
+  spring: '봄', summer: '여름', autumn: '가을', fall: '가을', winter: '겨울',
+  '봄': 'spring', '여름': 'summer', '가을': 'autumn', '겨울': 'winter',
+  // 자연
+  ocean: '바다', sea: '바다', forest: '숲', sky: '하늘', flower: '꽃', nature: '자연',
+  sunset: '일몰', sunrise: '일출', mountain: '산', garden: '정원', jungle: '정글',
+  '바다': 'ocean', '숲': 'forest', '하늘': 'sky', '꽃': 'flower', '자연': 'nature',
+  '일몰': 'sunset', '정원': 'garden', '정글': 'jungle',
+  // 색상
+  red: '빨강', blue: '파랑', green: '초록', yellow: '노랑', purple: '보라',
+  pink: '핑크', orange: '오렌지', brown: '브라운', gold: '골드', silver: '실버',
+  mint: '민트', coral: '코랄', navy: '네이비', lavender: '라벤더', peach: '피치',
+  '빨강': 'red', '파랑': 'blue', '초록': 'green', '노랑': 'yellow', '보라': 'purple',
+  '핑크': 'pink', '오렌지': 'orange', '브라운': 'brown', '골드': 'gold',
+  '민트': 'mint', '코랄': 'coral', '네이비': 'navy', '라벤더': 'lavender', '피치': 'peach',
+  // 무드
+  romantic: '로맨틱', modern: '모던', vintage: '빈티지', retro: '레트로', elegant: '우아한',
+  minimal: '미니멀', luxury: '럭셔리', cute: '귀여운', calm: '차분한', bright: '밝은',
+  party: '파티', wedding: '웨딩', business: '비즈니스', healing: '힐링',
+  '로맨틱': 'romantic', '모던': 'modern', '빈티지': 'vintage', '레트로': 'retro',
+  '미니멀': 'minimal', '럭셔리': 'luxury', '차분한': 'calm', '밝은': 'bright',
+  '파티': 'party', '웨딩': 'wedding', '비즈니스': 'business', '힐링': 'healing',
+  // 국가
+  korea: '한국', japan: '일본', france: '프랑스', italy: '이탈리아', greece: '그리스',
+  india: '인도', mexico: '멕시코', morocco: '모로코', egypt: '이집트', norway: '노르웨이',
+  '한국': 'korea', '일본': 'japan', '프랑스': 'france', '이탈리아': 'italy', '그리스': 'greece',
+  '인도': 'india', '멕시코': 'mexico', '모로코': 'morocco', '이집트': 'egypt', '노르웨이': 'norway',
+  // 음식
+  coffee: '커피', chocolate: '초콜릿', dessert: '디저트', sushi: '스시', food: '음식',
+  '커피': 'coffee', '초콜릿': 'chocolate', '디저트': 'dessert', '스시': 'sushi', '음식': 'food',
+  // 기타
+  neon: '네온', cyber: '사이버', space: '우주', galaxy: '갤럭시', ice: '아이스',
+  christmas: '크리스마스', halloween: '할로윈', tropical: '열대',
+  '네온': 'neon', '사이버': 'cyber', '우주': 'space', '갤럭시': 'galaxy', '아이스': 'ice',
+  '크리스마스': 'christmas', '할로윈': 'halloween', '열대': 'tropical',
+};
+
+function expandSearchTerms(query) {
+  const terms = query.toLowerCase().trim().split(/\s+/);
+  const expanded = new Set();
+  terms.forEach(t => {
+    expanded.add(t);
+    if (bilingualMap[t]) expanded.add(bilingualMap[t].toLowerCase());
+    // partial match in map keys
+    Object.keys(bilingualMap).forEach(k => {
+      if (k.includes(t) || t.includes(k)) {
+        expanded.add(k);
+        expanded.add(bilingualMap[k].toLowerCase());
+      }
+    });
+  });
+  return [...expanded];
+}
+
+function searchPalette(p, terms) {
+  const searchable = [
+    p.name, p.desc, p.category || '', p.theme || '', p.sub || '',
+    ...(p.tags || [])
+  ].join(' ').toLowerCase();
+  return terms.some(t => searchable.includes(t));
+}
+
+let searchTimeout;
+const searchInput = document.getElementById('searchInput');
+const searchClear = document.getElementById('searchClear');
+const searchInfo = document.getElementById('searchInfo');
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(performSearch, 200);
+  searchClear.classList.toggle('visible', searchInput.value.length > 0);
+});
+
+function clearSearch() {
+  searchInput.value = '';
+  searchClear.classList.remove('visible');
+  searchInfo.textContent = '';
+  // restore original views
+  document.querySelector('.tabs').style.display = '';
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = '');
+  // re-activate previously active tab
+  const activeBtn = document.querySelector('.tab-btn.active');
+  if (activeBtn) {
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + activeBtn.dataset.tab).classList.add('active');
+  }
+  document.getElementById('filterBar').style.display = '';
+  document.querySelector('#tab-palettes .section-title').textContent = '🎯 추천 색상 팔레트';
+  renderPalettes();
+  renderThemeGrid();
+  renderTrends();
+}
+
+function performSearch() {
+  const query = searchInput.value.trim();
+  if (!query) { clearSearch(); return; }
+
+  const terms = expandSearchTerms(query);
+
+  // Search across all palette types
+  const matchedPalettes = palettes.filter(p => searchPalette(p, terms));
+  const matchedTheme = themePalettes.filter(p => searchPalette(p, terms));
+  const matchedTrend = trendPalettes.filter(p => searchPalette(p, terms));
+  const total = matchedPalettes.length + matchedTheme.length + matchedTrend.length;
+
+  // Show all tabs with filtered results
+  document.querySelector('.tabs').style.display = 'none';
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+
+  // Show palettes tab with combined results
+  const palettesTab = document.getElementById('tab-palettes');
+  palettesTab.style.display = 'block';
+
+  if (total === 0) {
+    document.getElementById('paletteGrid').innerHTML = `
+      <div class="search-no-results" style="grid-column:1/-1">
+        <div class="no-emoji">🔍</div>
+        <p>"${query}" 검색 결과가 없습니다</p>
+        <p style="margin-top:8px;font-size:0.85em;">다른 키워드로 검색해보세요 (한글/영어 모두 가능)</p>
+      </div>`;
+    searchInfo.textContent = '';
+    document.getElementById('filterBar').style.display = 'none';
+    return;
+  }
+
+  searchInfo.textContent = `"${query}" 검색 결과: ${total}개 팔레트`;
+  document.getElementById('filterBar').style.display = 'none';
+  document.querySelector('#tab-palettes .section-title').textContent = '🔍 검색 결과';
+
+  const allMatched = [
+    ...matchedPalettes.map(p => ({...p, source: '추천'})),
+    ...matchedTheme.map(p => ({...p, source: '테마'})),
+    ...matchedTrend.map(p => ({...p, source: '트렌드', tags: []})),
+  ];
+
+  document.getElementById('paletteGrid').innerHTML = allMatched.map(p => `
+    <div class="palette-card">
+      <div class="palette-colors">
+        ${p.colors.map(c => `<div style="background:${c}" data-hex="${c}" onclick="openColorModal('${c}')"></div>`).join('')}
+      </div>
+      <div class="palette-info">
+        <h3>${p.name} <span style="font-size:0.7em;color:var(--accent-light);font-weight:normal;">${p.source}</span></h3>
+        <p>${p.desc}</p>
+        <div class="palette-tags">
+          ${(p.tags || []).map(t => `<span class="palette-tag">${t}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderTrends() {
+  trendGrid.innerHTML = trendPalettes.map(p => `
+    <div class="trend-card">
+      <div class="trend-colors">
+        ${p.colors.map(c => `<div style="background:${c}"></div>`).join('')}
+      </div>
+      <div class="trend-info">
+        <h3>${p.name}</h3>
+        <p>${p.desc}</p>
+        <div class="trend-hex-list">
+          ${p.colors.map(c => `<span class="trend-hex" onclick="copyText('${c}')">${c}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
 
 // ===== COLOR MODAL =====
 const allHarmonyTypes = [
